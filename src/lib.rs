@@ -51,8 +51,8 @@ pub fn car_detection(frame: &Frame, led_color: Color, taget_color: Color) -> eyr
     let mut corners: Vec<_> =
         get_closest_corners(car_led_pos, &corners_fast9(&frame.0.to_luma8(), 150));
 
-    let a = corners.pop().context("missing corner")?;
-    let b = corners.pop().context("missing corner")?;
+    let a = corners.pop().context("missing first corner")?;
+    let b = corners.pop().context("missing second corner")?;
     let ch = Position::new((a.x + b.x) / 2, (a.y + b.y) / 2);
 
     let v1 = Vector::from((ch, car_led_pos));
