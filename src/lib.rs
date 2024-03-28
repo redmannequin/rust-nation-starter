@@ -18,6 +18,7 @@ struct CornerDistance<'a> {
 }
 
 fn get_closest_corners(led_position: Position, corners: &[Corner]) -> Vec<Corner> {
+    println!("led_position: {:?}. Corners: {:?}", led_position, corners);
     // TODO: we are sorting the full array of corners. We can optimize this by using a min heap instead
     let mut closest_corners: Vec<CornerDistance<'_>> = corners
         .iter()
