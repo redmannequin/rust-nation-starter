@@ -1,5 +1,7 @@
 mod cheats;
 
+use std::time::Duration;
+
 use hs_hackathon::prelude::*;
 
 use cheats::angles::Vector;
@@ -48,6 +50,9 @@ enum State {
     Idle,
 }
 
+static ANGLE_THRESHOLD: f32 = 0.1;
+static STEP_DURATION: Duration = Duration::from_millis(100);
+
 impl State {
     async fn execute(
         &mut self,
@@ -56,9 +61,26 @@ impl State {
         wheels: &mut WheelOrientation,
     ) -> eyre::Result<()> {
         match self {
-            State::Turning => loop {
-                todo!()
-            },
+            State::Turning => {
+                loop {
+                    // TODO: replace this with getting the current angle between our direction and the target
+                    let angle = 90.0;
+                    if angle < ANGLE_THRESHOLD {
+                        break;
+                    }
+                    // TODO: validate direction is correct
+                    let wheels_orientation = if angle > 0.0 {
+                        Angle::right()
+                    } else {
+                        Angle::left()
+                    };
+                    wheels.set(wheels_orientation).await?;
+                    // TODO: do we ever need to go backward?
+                    motor.move_for(Velocity::forward(), STEP_DURATION).await?;
+                }
+                // test
+                *self = Self::Approaching;
+            }
             State::Approaching => {
                 let hint = cheats::approaching::auto(
                     &TeamColors {
