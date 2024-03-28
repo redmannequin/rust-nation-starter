@@ -7,6 +7,7 @@ use hs_hackathon::{
 use imageproc::corners::{corners_fast9, Corner};
 
 mod cheats;
+mod angle_detection;
 
 #[derive(Debug, Clone)]
 struct CornerDistance<'a> {
