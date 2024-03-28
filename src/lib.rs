@@ -6,8 +6,10 @@ use hs_hackathon::{
 };
 use imageproc::corners::{corners_fast9, Corner};
 
-mod cheats;
+use crate::cheats::angles::Vector;
+
 mod angle_detection;
+mod cheats;
 
 #[derive(Debug, Clone)]
 struct CornerDistance<'a> {
@@ -15,7 +17,7 @@ struct CornerDistance<'a> {
     distance: u32,
 }
 
-fn get_closest_corners<'a>(led_position: &'_ Position, corners: &'a [Corner]) -> Vec<&'a Corner> {
+fn get_closest_corners(led_position: Position, corners: &[Corner]) -> Vec<Corner> {
     // TODO: we are sorting the full array of corners. We can optimize this by using a min heap instead
     let mut closest_corners: Vec<CornerDistance<'_>> = corners
         .iter()
@@ -25,31 +27,38 @@ fn get_closest_corners<'a>(led_position: &'_ Position, corners: &'a [Corner]) ->
         })
         .collect();
     closest_corners.sort_by(|a, b| a.distance.cmp(&b.distance));
-    closest_corners.iter().map(|corner| corner.corner).collect()
+    closest_corners
+        .iter()
+        .map(|corner| *corner.corner)
+        .collect()
 }
 
-pub fn car_detection(frame: &Frame, led_color: Color) -> eyre::Result<()> {
+pub fn car_detection(frame: &Frame, led_color: Color, taget_color: Color) -> eyre::Result<f64> {
     let leds = led_detection(&frame.0, &LedDetectionConfig::default())?;
 
-    let led_pos = leds
+    let car_led_pos = leds
         .iter()
         .find(|&led| led.color == led_color)
         .map(|led| Position::from(led.bbox))
         .context(format!("car led not in camara view: {:?}", led_color))?;
 
-    let _corners: Vec<_> = corners_fast9(&frame.0.to_luma8(), 150)
-        .into_iter()
-        .filter_map(|corner| {
-            let pos = Position::new(corner.x, corner.y);
-            if led_pos.distance(pos) < 100 {
-                Some(pos)
-            } else {
-                None
-            }
-        })
-        .collect();
+    let target_led_pos = leds
+        .iter()
+        .find(|&led| led.color == taget_color)
+        .map(|led| Position::from(led.bbox))
+        .context(format!("car led not in camara view: {:?}", taget_color))?;
 
-    todo!()
+    let mut corners: Vec<_> =
+        get_closest_corners(car_led_pos, &corners_fast9(&frame.0.to_luma8(), 150));
+
+    let a = corners.pop().context("missing corner")?;
+    let b = corners.pop().context("missing corner")?;
+    let ch = Position::new((a.x + b.x) / 2, (a.y + b.y) / 2);
+
+    let v1 = Vector::from((ch, car_led_pos));
+    let v2 = Vector::from((ch, target_led_pos));
+
+    Ok(v1.angle(v2))
 }
 
 trait ColorExt {
@@ -100,7 +109,7 @@ mod tests {
             },
         ];
 
-        let closest_corners = get_closest_corners(&led_position, &corners);
+        let closest_corners = get_closest_corners(led_position, &corners);
         assert_eq!(closest_corners.len(), 4);
         assert_eq!(closest_corners[0].x, 1);
         assert_eq!(closest_corners[0].y, 1);

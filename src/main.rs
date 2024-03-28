@@ -8,6 +8,7 @@ use cheats::angles::Vector;
 use cheats::approaching::Hint;
 use cheats::positioning::Position;
 use cheats::TeamColors;
+use rust_nation_starter::car_detection;
 
 const CAR: Color = Color::Red;
 const TARGET: Color = Color::Blue;
@@ -50,8 +51,8 @@ enum State {
     Idle,
 }
 
-static ANGLE_THRESHOLD: f32 = 0.1;
-static STEP_DURATION: Duration = Duration::from_millis(100);
+static ANGLE_THRESHOLD: f64 = 0.1;
+static STEP_DURATION: Duration = Duration::from_millis(500);
 
 impl State {
     async fn execute(
@@ -60,23 +61,26 @@ impl State {
         motor: &mut MotorSocket,
         wheels: &mut WheelOrientation,
     ) -> eyre::Result<()> {
+        println!("state: {:?}", self);
         match self {
             State::Turning => {
+                let mut wheels_orientation = Angle::straight();
                 loop {
                     // TODO: replace this with getting the current angle between our direction and the target
-                    let angle = 90.0;
+                    let frame = drone.snapshot().await?;
+                    let angle = car_detection(&frame, Color::Blue, Color::Green)?;
                     if angle < ANGLE_THRESHOLD {
                         break;
                     }
                     // TODO: validate direction is correct
-                    let wheels_orientation = if angle > 0.0 {
-                        Angle::right()
-                    } else {
-                        Angle::left()
+                    if angle > 0.0 && wheels_orientation != Angle::right() {
+                        wheels_orientation = Angle::right();
+                        wheels.set(wheels_orientation).await?;
                     };
-                    wheels.set(wheels_orientation).await?;
+
                     // TODO: do we ever need to go backward?
                     motor.move_for(Velocity::forward(), STEP_DURATION).await?;
+                    println!("moving forward");
                 }
                 // test
                 *self = Self::Approaching;
@@ -113,7 +117,6 @@ impl State {
                 *self = Self::Turning;
             }
         }
-
         Ok(())
     }
 }
