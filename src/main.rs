@@ -57,7 +57,7 @@ impl State {
     ) -> eyre::Result<()> {
         match self {
             State::Turning => loop {
-                unimplemented!()
+                todo!()
             },
             State::Approaching => {
                 let hint = cheats::approaching::auto(
